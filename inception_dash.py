@@ -154,6 +154,13 @@ if wallet_filter != 'All':
     withdraw_logs_df_filtered = withdraw_logs_df_filtered[withdraw_logs_df_filtered['address'] == wallet_filter]
 
 
+# show stats table
+st.write('Wallet Stats for the selected period')
+wallet_stats = withdraw_logs_df_filtered.groupby('address').agg({'amount': ['sum', 'count']}).reset_index()    
+wallet_stats.columns = ['Wallet', 'Total Amount', 'Count']
+wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count'}, inplace=True)
+st.write(wallet_stats)
+
 # show table with logs
 st.write('Withdraw logs')
 st.write(withdraw_logs_df_filtered)
