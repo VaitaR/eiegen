@@ -64,7 +64,7 @@ def get_proxy_abi(address:str):
     return proxy_contract_abi
 
 def get_logs_decode(address:str):
-    log = requests.get('https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=' + address + '&apikey=' + os.getenv('ETHERSCAN_KEY')).text
+    log = requests.get('https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=19098696&toBlock=latest&address=' + address + '&apikey=' + os.getenv('ETHERSCAN_KEY')).text
     log_list = json.loads(log)
 
     proxy_abi = json.loads(get_proxy_abi(address))
@@ -110,6 +110,7 @@ def withdraw_logs(all_logs:list):
 wallets = load_wallets()
 all_logs = get_wallets_logs(wallets)
 withdraw_logs = withdraw_logs(all_logs)
+st.write('Data loaded for all wallets')
 
 
 # save withdraw logs to a csv file

@@ -1,13 +1,52 @@
 {
     "wallets": [
         {
-            "address": "0xc4181dC7BB31453C4A48689ce0CBe975e495321c",
-            "name": "mainnet_InswEthVault"
-        }
-        ,
-        {
             "address": "0x90E80E25ABDB6205B08DeBa29a87f7eb039023C2",
             "name": "mainnet_InEthxVault"
+        },
+        {
+            "address": "0x36B429439AB227fAB170A4dFb3321741c8815e55",
+            "name": "mainnet_InankrEthVault"
+        },
+        {
+            "address": "0xfE715358368416E01d3A961D3a037b7359735d5e",
+            "name": "mainnet_IncbEthVault"
+        },
+        {
+            "address": "0x6E17a8b5D33e6DBdB9fC61d758BF554b6AD93322",
+            "name": "mainnet_InlsEthVault"
+        },
+        {
+            "address": "0xd0ee89d82183D7Ddaef14C6b4fC0AA742F426355",
+            "name": "mainnet_InmEthVault"
+        },
+        {
+            "address": "0x4878F636A9Aa314B776Ac51A25021C44CAF86bEd",
+            "name": "mainnet_InoEthVault"
+        },
+        {
+            "address": "0xA9F8c770661BeE8DF2D026edB1Cb6FF763C780FF",
+            "name": "mainnet_InosEthVault"
+        },
+        {
+            "address": "0x1Aa53BC4Beb82aDf7f5EDEE9e3bBF3434aD59F12",
+            "name": "mainnet_InrEthVault"
+        },
+        {
+            "address": "0x295234B7E370a5Db2D2447aCA83bc7448f151161",
+            "name": "mainnet_InsfrxEthVault"
+        },
+        {
+            "address": "0x814CC6B8fd2555845541FB843f37418b05977d8d",
+            "name": "mainnet_InstEthVault"
+        },
+        {
+            "address": "0xc4181dC7BB31453C4A48689ce0CBe975e495321c",
+            "name": "mainnet_InswEthVault"
+        },
+        {
+            "address": "0xC0660932C5dCaD4A1409b7975d147203B1e9A2B6",
+            "name": "mainnet_InwbEthVault"
         }
     ]
 }
