@@ -11,7 +11,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-etherscan_key = os.getenv('ETHERSCAN_KEY')
+# etherscan_key = os.getenv('ETHERSCAN_KEY')
 
 
 def decode_logs_data(logs:list, abi:list): 
@@ -106,15 +106,15 @@ def withdraw_logs(all_logs:list):
                     # print("\n\n")
     return withdraw_logs
 
-
+# load data
 wallets = load_wallets()
 all_logs = get_wallets_logs(wallets)
 withdraw_logs = withdraw_logs(all_logs)
 
 
-# # save withdraw logs to a csv file
-# withdraw_logs_df = pd.DataFrame(withdraw_logs)
-# withdraw_logs_df.to_csv(os.path.join(curr_dir, 'withdraw_logs.csv'), index=False)
+# save withdraw logs to a csv file
+withdraw_logs_df = pd.DataFrame(withdraw_logs)
+withdraw_logs_df.to_csv(os.path.join(curr_dir, 'withdraw_logs.csv'), index=False)
 
 # read withdraw logs from csv file
 withdraw_logs_df = pd.read_csv(os.path.join(curr_dir, 'withdraw_logs.csv'))
