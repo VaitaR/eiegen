@@ -1,0 +1,160 @@
+import streamlit as st
+from web3 import Web3
+from eth_abi import decode
+
+from datetime import datetime
+import requests
+import json
+import pandas as pd
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
+
+etherscan_key = os.getenv('ETHERSCAN_KEY')
+
+
+def decode_logs_data(logs:list, abi:list): 
+
+    for log in logs:
+        # Convert hex values to integers
+        keys_to_convert = ['blockNumber', 'timeStamp', 'gasPrice', 'gasUsed', 'logIndex', 'transactionIndex']
+        for key in keys_to_convert:
+            if key in log:
+                # print(f"key: {key}, value: {log[key]}")
+                log[key] = int(log[key], 16)
+        # convert logs data
+        w3 = Web3(Web3.HTTPProvider(f''))    
+        receipt_event_signature_hex = log['topics'][0]
+        event_list = [item for item in abi if item['type'] == 'event']
+
+        for event in event_list:
+            # Generate event signature hash
+            name = event['name']
+            inputs = ",".join([param['type'] for param in event['inputs']])
+            event_signature_text = f"{name}({inputs})"
+            event_signature_hex = w3.to_hex(w3.keccak(text=event_signature_text))
+
+            # Check if the event signature matches the log's signature
+            if event_signature_hex == receipt_event_signature_hex:
+                decoded_log = {"event": event['name']}
+
+                # Decode indexed topics
+                indexed_params = [input for input in event['inputs'] if input['indexed']]
+                for i, param in enumerate(indexed_params):
+                    topic = log['topics'][i+1]
+                    decoded_log[param['name']] = decode([param['type']], bytes.fromhex(topic[2:]))[0]
+
+                # Decode non-indexed data
+                non_indexed_params = [input for input in event['inputs'] if not input['indexed']]
+                non_indexed_types = [param['type'] for param in non_indexed_params]
+                non_indexed_values = decode(non_indexed_types, bytes.fromhex(log['data'][2:]))
+                for i, param in enumerate(non_indexed_params):
+                    decoded_log[param['name']] = non_indexed_values[i]
+
+                log['decoded_data'] = decoded_log
+                break  # Break the inner loop as we've found the matching event
+
+    return logs
+
+def get_proxy_abi(address:str):
+    proxy_contract = json.loads(requests.get('https://api.etherscan.io/api?module=contract&action=getsourcecode&address=' + address + '&apikey=' + os.getenv('ETHERSCAN_KEY')).text)['result']
+    proxy_contract_address = proxy_contract[0]['Implementation']
+    proxy_contract_abi = json.loads(requests.get('https://api.etherscan.io/api?module=contract&action=getabi&address=' + proxy_contract_address + '&apikey=' + os.getenv('ETHERSCAN_KEY')).text)['result']
+    return proxy_contract_abi
+
+def get_logs_decode(address:str):
+    log = requests.get('https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=' + address + '&apikey=' + os.getenv('ETHERSCAN_KEY')).text
+    log_list = json.loads(log)
+
+    proxy_abi = json.loads(get_proxy_abi(address))
+    # print(type(proxy_abi))
+    logs_decoded = decode_logs_data(log_list['result'], proxy_abi)
+    return logs_decoded
+
+curr_dir = os.path.dirname(os.path.realpath(__file__))
+
+# # load wallets info
+@st.cache_data
+def load_wallets():
+    wallets = json.load(open(os.path.join(curr_dir, 'inception_wallets.json')))['wallets']
+    return wallets
+
+@st.cache_data
+def get_wallets_logs(wallets):
+    all_logs = []
+    for wallet in wallets:
+        print(f"Getting logs for {wallet['address']}...")
+        address = str(wallet['address'])
+        logs = get_logs_decode(address)
+        print(f"Logs for {wallet['name']}")
+        print("========================= \n\n")
+        all_logs.append(logs)
+    return all_logs
+
+@st.cache_data
+def withdraw_logs(all_logs:list):
+    withdraw_logs = []
+    for log_list in all_logs:
+        for log in log_list:
+            if 'decoded_data' in log:
+                # print(log['decoded_data']['event'])
+                if log['decoded_data']['event'] == 'Withdraw':
+                    withdraw_logs.append(log)
+                    # print(log['decoded_data']['event'])
+                    # print(log['decoded_data'])
+                    # print("\n\n")
+    return withdraw_logs
+
+
+wallets = load_wallets()
+all_logs = get_wallets_logs(wallets)
+withdraw_logs = withdraw_logs(all_logs)
+
+
+# # save withdraw logs to a csv file
+# withdraw_logs_df = pd.DataFrame(withdraw_logs)
+# withdraw_logs_df.to_csv(os.path.join(curr_dir, 'withdraw_logs.csv'), index=False)
+
+# read withdraw logs from csv file
+withdraw_logs_df = pd.read_csv(os.path.join(curr_dir, 'withdraw_logs.csv'))
+withdraw_logs_df['timeStamp'] = pd.to_datetime(withdraw_logs_df['timeStamp'], unit='s')
+withdraw_logs_df.sort_values(by='timeStamp', ascending=False, inplace=True)
+withdraw_logs_df.reset_index(drop=True, inplace=True)
+
+
+# convert decoded_data to separate columns
+def convert_decoded_data_to_columns(decoded_data:str):
+    decoded_data = eval(decoded_data)
+    return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['owner'], decoded_data['amount'], decoded_data['iShares']])
+withdraw_logs_df[['event', 'sender', 'receiver', 'owner', 'amount', 'iShares']] = withdraw_logs_df['decoded_data'].apply(convert_decoded_data_to_columns)
+                     
+withdraw_logs_df['amount'] = withdraw_logs_df['amount'].astype('float') / 10**18                    
+# columns order
+withdraw_logs_df = withdraw_logs_df[['timeStamp', 'amount', 'event', 'address', 'transactionHash', 'decoded_data']]
+
+st.title('Inception Monitoring Dashboard')
+
+
+# add filter for the logs on the dashboard so user can filter by date
+# filter by date
+st.write('Filter by date')
+start_date = pd.to_datetime(st.date_input('Start date', datetime.now() - pd.Timedelta(days=8)))
+end_date = pd.to_datetime(st.date_input('End date', datetime.now()))
+mask = (withdraw_logs_df['timeStamp'] > start_date) & (withdraw_logs_df['timeStamp'] <= end_date)
+withdraw_logs_df_filtered = withdraw_logs_df.loc[mask]
+
+# add filter by wallet
+st.write('Filter by wallet')
+wallet_filter_list = withdraw_logs_df_filtered['address'].unique().tolist()
+wallet_filter_list.insert(0, 'All')
+wallet_filter = st.selectbox('Select wallet', wallet_filter_list)
+if wallet_filter != 'All':
+    withdraw_logs_df_filtered = withdraw_logs_df_filtered[withdraw_logs_df_filtered['address'] == wallet_filter]
+
+
+# show table with logs
+st.write('Withdraw logs')
+st.write(withdraw_logs_df_filtered)
+
+

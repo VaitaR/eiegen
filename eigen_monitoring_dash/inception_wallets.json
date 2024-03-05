@@ -1,0 +1,13 @@
+{
+    "wallets": [
+        {
+            "address": "0xc4181dC7BB31453C4A48689ce0CBe975e495321c",
+            "name": "mainnet_InswEthVault"
+        }
+        ,
+        {
+            "address": "0x90E80E25ABDB6205B08DeBa29a87f7eb039023C2",
+            "name": "mainnet_InEthxVault"
+        }
+    ]
+}
