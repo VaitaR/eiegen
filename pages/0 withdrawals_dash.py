@@ -72,7 +72,7 @@ def get_logs_decode(address:str):
     logs_decoded = decode_logs_data(log_list['result'], proxy_abi)
     return logs_decoded
 
-curr_dir = os.path.dirname(os.path.realpath(__file__))
+curr_dir = os.path.dirname(os.path.dirname(__file__))
 
 # # load wallets info
 @st.cache_data
