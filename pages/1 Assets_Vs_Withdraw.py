@@ -3,6 +3,7 @@ from web3 import Web3
 import requests
 import json
 import os
+from datetime import datetime
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -10,8 +11,12 @@ curr_dir = os.path.dirname(os.path.dirname(__file__))
 
 @st.cache_data(ttl=1800)
 def get_block():
-    current_block = int(w3.eth.get_block('latest')['number'])
-    return current_block
+    block_data = w3.eth.get_block('latest')
+    current_block = block_data['number']
+    block_timestamp = block_data['timestamp']
+    # convert timestamp to human readable format
+    block_timestamp = datetime.utcfromtimestamp(block_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return current_block, block_timestamp
 
 @st.cache_data(ttl=1800)
 def get_proxy_abi(address:str):
@@ -64,8 +69,10 @@ def wallet_rpc_stats(wallet, current_block:int):
 
 w3 = Web3(Web3.HTTPProvider('https://rpc.ankr.com/eth/' + os.getenv('ANKR_KEY')))
 
-current_block = get_block()
+current_block, block_timestamp = get_block()
 st.write(f"Current block: {current_block}")
+st.write(f"Block timestamp: {block_timestamp} (UTC)")
+st.write('-------------------')
 
 wallets = load_wallets()
 

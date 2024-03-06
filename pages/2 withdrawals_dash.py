@@ -253,10 +253,20 @@ wallet_stats.columns = ['Wallet', 'Total Amount', 'Count']
 wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count'}, inplace=True)
 st.write(wallet_stats)
 
+@st.cache_data(ttl=1800)
+def get_block():
+    block_data = w3.eth.get_block('latest')
+    current_block = block_data['number']
+    block_timestamp = block_data['timestamp']
+    # convert timestamp to human readable format
+    block_timestamp = datetime.utcfromtimestamp(block_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return current_block, block_timestamp
 
+current_block, block_timestamp = get_block()
 
 # show table with logs
 st.title('Withdraw logs')
+st.write(f"\n Current block: {current_block} | Timestamp: {block_timestamp} (UTC)")
 st.write(withdraw_logs_df_filtered)
 
 st.write('Redeem logs')
