@@ -47,9 +47,13 @@ def wallet_rpc_stats(wallet, current_block:int):
         PendingWithdrawalAmountFromEL = round(PendingWithdrawalAmountFromEL / 10**18, 4)
 
         st.write(f"Withdraw: {totalAmountToWithdraw} | Pending: {PendingWithdrawalAmountFromEL} | Assets: {totalAssets}")
-        if totalAmountToWithdraw > totalAssets:
+        if PendingWithdrawalAmountFromEL != 0:
+            if totalAmountToWithdraw > totalAssets + PendingWithdrawalAmountFromEL:
+                # write red color that need action
+                st.markdown('<span style="color:orange">**_Orange danger_**</span>', unsafe_allow_html=True)
+        elif totalAmountToWithdraw > totalAssets:
             # write red color that need action
-            st.markdown('<span style="color:red">**_Need action_**</span>', unsafe_allow_html=True)
+            st.markdown('<span style="color:red">**_Red danger_**</span>', unsafe_allow_html=True)
     except Exception as e:
         st.write(f"Error with RPC requests: {e}")
         st.write()
