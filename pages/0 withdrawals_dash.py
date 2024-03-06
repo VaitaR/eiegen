@@ -1,6 +1,7 @@
 import streamlit as st
-from web3 import Web3
+from web3 import Web3, AsyncWeb3
 from eth_abi import decode
+import asyncio
 
 from datetime import datetime
 import requests
@@ -95,23 +96,38 @@ def get_wallets_logs(wallets):
 @st.cache_data
 def withdraw_logs(all_logs:list):
     withdraw_logs = []
+    redeem_logs = []
     for log_list in all_logs:
         for log in log_list:
             if 'decoded_data' in log:
                 # print(log['decoded_data']['event'])
                 if log['decoded_data']['event'] == 'Withdraw':
                     withdraw_logs.append(log)
-                    # print(log['decoded_data']['event'])
-                    # print(log['decoded_data'])
-                    # print("\n\n")
-    return withdraw_logs
 
+                if log['decoded_data']['event'] == 'Redeem':
+                    redeem_logs.append(log)
+   
+    return withdraw_logs, redeem_logs
+
+async def check_Redeemed(contract_address, sender, current_block):
+    # function getPendingWithdrawalOf
+    reedem_status = {}
+    proxy_abi = json.loads(get_proxy_abi(contract_address))
+    
+    contract =  w3_async.eth.contract(address = contract_address, abi = proxy_abi)
+    isAbleToRedeem = await contract.functions.isAbleToRedeem(sender).call(block_identifier = current_block)
+    reedem_status['address'] = isAbleToRedeem
+    return reedem_status
+
+# setup rpc
+w3_async = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider('https://rpc.ankr.com/eth/' + os.getenv('ANKR_KEY')))
+w3 = Web3(Web3.HTTPProvider('https://rpc.ankr.com/eth/' + os.getenv('ANKR_KEY')))
 # load data
 wallets = load_wallets()
 all_logs = get_wallets_logs(wallets)
-withdraw_logs = withdraw_logs(all_logs)
-st.write('Data loaded for all wallets')
+withdraw_logs, redeem_logs = withdraw_logs(all_logs)
 
+st.write('Data loaded for all wallets')
 
 # save withdraw logs to a csv file
 withdraw_logs_df = pd.DataFrame(withdraw_logs)
@@ -124,26 +140,47 @@ withdraw_logs_df.sort_values(by='timeStamp', ascending=False, inplace=True)
 withdraw_logs_df.reset_index(drop=True, inplace=True)
 
 
+# save withdraw logs to a csv file
+redeem_logs_df = pd.DataFrame(redeem_logs)
+redeem_logs_df.to_csv(os.path.join(curr_dir, 'withdraw_logs.csv'), index=False)
+
+# read withdraw logs from csv file
+redeem_logs_df = pd.read_csv(os.path.join(curr_dir, 'withdraw_logs.csv'))
+redeem_logs_df['timeStamp'] = pd.to_datetime(redeem_logs_df['timeStamp'], unit='s')
+redeem_logs_df.sort_values(by='timeStamp', ascending=False, inplace=True)
+redeem_logs_df.reset_index(drop=True, inplace=True)
+
+
 # convert decoded_data to separate columns
 def convert_decoded_data_to_columns(decoded_data:str):
     decoded_data = eval(decoded_data)
-    return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['owner'], decoded_data['amount'], decoded_data['iShares']])
+    if decoded_data['event'] == 'Withdraw':
+        return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['owner'], decoded_data['amount'], decoded_data['iShares']])
+    if decoded_data['event'] == 'Redeem':
+        return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['amount']])
 withdraw_logs_df[['event', 'sender', 'receiver', 'owner', 'amount', 'iShares']] = withdraw_logs_df['decoded_data'].apply(convert_decoded_data_to_columns)
-                     
-withdraw_logs_df['amount'] = withdraw_logs_df['amount'].astype('float') / 10**18                    
+redeem_logs_df[['event', 'sender', 'receiver', 'amount']] = redeem_logs_df['decoded_data'].apply(convert_decoded_data_to_columns)
+
+
+withdraw_logs_df['amount'] = withdraw_logs_df['amount'].astype('float') / 10**18  
+redeem_logs_df['amount'] = redeem_logs_df['amount'].astype('float') / 10**18                  
 # columns order
-withdraw_logs_df = withdraw_logs_df[['timeStamp', 'amount', 'event', 'address', 'transactionHash', 'decoded_data']]
+withdraw_logs_df['Redeemed'] = 'None'
+withdraw_logs_df['AbleRedeem'] = 'None'
+withdraw_logs_df = withdraw_logs_df[['timeStamp', 'AbleRedeem', 'Redeemed', 'amount', 'event', 'sender', 'address', 'transactionHash', 'decoded_data']]
+redeem_logs_df = redeem_logs_df[['timeStamp', 'amount', 'event', 'sender', 'address', 'transactionHash', 'decoded_data']]
 
 st.title('Inception Monitoring Dashboard')
-
 
 # add filter for the logs on the dashboard so user can filter by date
 # filter by date
 st.write('Filter by date')
 start_date = pd.to_datetime(st.date_input('Start date', datetime.now() - pd.Timedelta(days=8)))
 end_date = pd.to_datetime(st.date_input('End date', datetime.now()))
-mask = (withdraw_logs_df['timeStamp'] > start_date) & (withdraw_logs_df['timeStamp'] <= end_date)
-withdraw_logs_df_filtered = withdraw_logs_df.loc[mask]
+mask_withd = (withdraw_logs_df['timeStamp'] > start_date) & (withdraw_logs_df['timeStamp'] <= end_date)
+withdraw_logs_df_filtered = withdraw_logs_df.loc[mask_withd]
+mask_redeem = (redeem_logs_df['timeStamp'] > start_date) & (redeem_logs_df['timeStamp'] <= end_date)
+redeem_logs_df_filtered = redeem_logs_df.loc[mask_redeem]
 
 # add filter by wallet
 st.write('Filter by wallet')
@@ -152,7 +189,60 @@ wallet_filter_list.insert(0, 'All')
 wallet_filter = st.selectbox('Select wallet', wallet_filter_list)
 if wallet_filter != 'All':
     withdraw_logs_df_filtered = withdraw_logs_df_filtered[withdraw_logs_df_filtered['address'] == wallet_filter]
+    redeem_logs_df_filtered = redeem_logs_df_filtered[redeem_logs_df_filtered['address'] == wallet_filter]
 
+def flag_redeemed(withdraw_logs_df, redeem_logs_df):
+    # Инициализация столбца Redeemed с False
+    withdraw_logs_df['Redeemed'] = 'None'
+
+    # Используем временный DataFrame для отслеживания использованных redeem
+    redeem_used = pd.DataFrame(columns=redeem_logs_df.columns)
+
+    for index, withdraw_row in withdraw_logs_df.iterrows():
+        tolerance_percent = 1  # Погрешность в процентах
+        tolerance_value = withdraw_row['amount'] * tolerance_percent / 100  # Абсолютное значение погрешности
+
+        potential_redeems = redeem_logs_df[
+            (redeem_logs_df['sender'] == withdraw_row['sender']) & 
+            (redeem_logs_df['amount'] >= withdraw_row['amount'] - tolerance_value) & 
+            (redeem_logs_df['amount'] <= withdraw_row['amount'] + tolerance_value) &
+            (redeem_logs_df['timeStamp'] > withdraw_row['timeStamp'])
+        ].sort_values(by='timeStamp') # Сортировка по timeStamp для обработки самого раннего события redeem
+        
+        for _, redeem_row in potential_redeems.iterrows():
+            # Проверка, что redeem не использован
+            if not redeem_row['transactionHash'] in redeem_used['transactionHash'].values:
+                withdraw_logs_df.at[index, 'Redeemed'] = 'Redeemed'
+                redeem_used = pd.concat([redeem_used, redeem_row.to_frame().T])
+                break  # Прерывание цикла после нахождения первого подходящего redeem
+    
+    return withdraw_logs_df
+
+withdraw_logs_df_filtered = flag_redeemed(withdraw_logs_df_filtered, redeem_logs_df_filtered)
+
+# rpc status check
+# st.write('Check RPC status')
+current_block = w3.eth.block_number
+
+# check rpc status for sender address
+st.write('Check RPC status for sender address')
+non_redeemed_df = withdraw_logs_df_filtered[withdraw_logs_df_filtered['Redeemed'] == 'None']
+
+@st.cache_data
+def check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df):
+    for i in range(len(non_redeemed_df)):
+        try:
+            contract_address = Web3.to_checksum_address(non_redeemed_df['address'].iloc[i])
+            sender_address = Web3.to_checksum_address(non_redeemed_df['sender'].iloc[i])
+            status = asyncio.run(check_Redeemed(contract_address, sender_address, current_block))
+            # add data to withdraw_logs_df_filtered
+            withdraw_logs_df_filtered.at[non_redeemed_df.index[i], 'AbleRedeem'] = str(status['address'])
+        except Exception as e:
+            withdraw_logs_df_filtered.at[non_redeemed_df.index[i], 'AbleRedeem'] = f"Error: {e}"
+        # st.write(f"Sender address: {sender_address} | Redeem status: {status['address']}")
+    return withdraw_logs_df_filtered
+
+withdraw_logs_df_filtered = check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df)
 
 # show stats table
 st.write('Wallet Stats for the selected period')
@@ -162,7 +252,10 @@ wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count
 st.write(wallet_stats)
 
 # show table with logs
-st.write('Withdraw logs')
+st.title('Withdraw logs')
 st.write(withdraw_logs_df_filtered)
+
+st.write('Redeem logs')
+st.write(redeem_logs_df_filtered)
 
 
