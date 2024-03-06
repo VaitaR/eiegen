@@ -144,10 +144,10 @@ withdraw_logs_df.reset_index(drop=True, inplace=True)
 
 # save withdraw logs to a csv file
 redeem_logs_df = pd.DataFrame(redeem_logs)
-redeem_logs_df.to_csv(os.path.join(curr_dir, 'withdraw_logs.csv'), index=False)
+redeem_logs_df.to_csv(os.path.join(curr_dir, 'redeem_logs.csv'), index=False)
 
 # read withdraw logs from csv file
-redeem_logs_df = pd.read_csv(os.path.join(curr_dir, 'withdraw_logs.csv'))
+redeem_logs_df = pd.read_csv(os.path.join(curr_dir, 'redeem_logs.csv'))
 redeem_logs_df['timeStamp'] = pd.to_datetime(redeem_logs_df['timeStamp'], unit='s')
 redeem_logs_df.sort_values(by='timeStamp', ascending=False, inplace=True)
 redeem_logs_df.reset_index(drop=True, inplace=True)
@@ -160,6 +160,7 @@ def convert_decoded_data_to_columns(decoded_data:str):
         return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['owner'], decoded_data['amount'], decoded_data['iShares']])
     if decoded_data['event'] == 'Redeem':
         return pd.Series([decoded_data['event'], decoded_data['sender'], decoded_data['receiver'], decoded_data['amount']])
+    
 withdraw_logs_df[['event', 'sender', 'receiver', 'owner', 'amount', 'iShares']] = withdraw_logs_df['decoded_data'].apply(convert_decoded_data_to_columns)
 redeem_logs_df[['event', 'sender', 'receiver', 'amount']] = redeem_logs_df['decoded_data'].apply(convert_decoded_data_to_columns)
 
@@ -177,8 +178,8 @@ st.title('Inception Monitoring Dashboard')
 # add filter for the logs on the dashboard so user can filter by date
 # filter by date
 st.write('Filter by date')
-start_date = pd.to_datetime(st.date_input('Start date', datetime.now() - pd.Timedelta(days=8)))
-end_date = pd.to_datetime(st.date_input('End date', datetime.now()))
+start_date = pd.to_datetime(st.date_input('Start date', datetime.utcnow() - pd.Timedelta(days=8)))
+end_date = pd.to_datetime(st.date_input('End date', datetime.utcnow())) + pd.Timedelta(days=1)
 mask_withd = (withdraw_logs_df['timeStamp'] > start_date) & (withdraw_logs_df['timeStamp'] <= end_date)
 withdraw_logs_df_filtered = withdraw_logs_df.loc[mask_withd]
 mask_redeem = (redeem_logs_df['timeStamp'] > start_date) & (redeem_logs_df['timeStamp'] <= end_date)
@@ -193,6 +194,7 @@ if wallet_filter != 'All':
     withdraw_logs_df_filtered = withdraw_logs_df_filtered[withdraw_logs_df_filtered['address'] == wallet_filter]
     redeem_logs_df_filtered = redeem_logs_df_filtered[redeem_logs_df_filtered['address'] == wallet_filter]
 
+# was withdrawal redeemed or not
 def flag_redeemed(withdraw_logs_df, redeem_logs_df):
     # Инициализация столбца Redeemed с False
     withdraw_logs_df['Redeemed'] = 'None'
