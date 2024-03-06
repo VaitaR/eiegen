@@ -225,7 +225,6 @@ withdraw_logs_df_filtered = flag_redeemed(withdraw_logs_df_filtered, redeem_logs
 current_block = w3.eth.block_number
 
 # check rpc status for sender address
-st.write('Check RPC status for sender address')
 non_redeemed_df = withdraw_logs_df_filtered[withdraw_logs_df_filtered['Redeemed'] == 'None']
 
 @st.cache_data
@@ -243,6 +242,7 @@ def check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df):
     return withdraw_logs_df_filtered
 
 withdraw_logs_df_filtered = check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df)
+st.write('AbleRedeem status checked')
 
 # show stats table
 st.write('Wallet Stats for the selected period')
