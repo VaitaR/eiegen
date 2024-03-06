@@ -54,7 +54,7 @@ def wallet_rpc_stats(wallet, current_block:int):
         if PendingWithdrawalAmountFromEL != 0:
             if totalAmountToWithdraw > totalAssets + PendingWithdrawalAmountFromEL:
                 # write red color that need action
-                st.markdown('<span style="color:orange">**_Orange danger_**</span>', unsafe_allow_html=True)
+                st.markdown('<span style="color:orange">**_Awaiting for the WithdrawalFromEL_**</span>', unsafe_allow_html=True)
         elif totalAmountToWithdraw > totalAssets:
             # write red color that need action
             st.markdown('<span style="color:red">**_Red danger_**</span>', unsafe_allow_html=True)
