@@ -30,7 +30,8 @@ def load_wallets():
 def wallet_rpc_stats(wallet, current_block:int):
     address = wallet['address']
     name = wallet['name']
-    st.write(f"**Name: {name}**, {address}")
+    # print adress as etherscan hyperlink
+    st.write(f"**Name: {name}**, [{address}](https://etherscan.io/address/{address})")
     try:
         abi = get_proxy_abi(address)
     except Exception as e:
@@ -42,8 +43,10 @@ def wallet_rpc_stats(wallet, current_block:int):
         totalAmountToWithdraw = round(totalAmountToWithdraw / 10**18, 4)
         totalAssets = contract.functions.totalAssets().call(block_identifier = current_block)
         totalAssets = round(totalAssets / 10**18, 4)
+        PendingWithdrawalAmountFromEL = contract.functions.getPendingWithdrawalAmountFromEL().call(block_identifier = current_block)
+        PendingWithdrawalAmountFromEL = round(PendingWithdrawalAmountFromEL / 10**18, 4)
 
-        st.write(f"Withdraw: {totalAmountToWithdraw} | Assets: {totalAssets}")
+        st.write(f"Withdraw: {totalAmountToWithdraw} | Pending: {PendingWithdrawalAmountFromEL} | Assets: {totalAssets}")
         if totalAmountToWithdraw > totalAssets:
             # write red color that need action
             st.markdown('<span style="color:red">**_Need action_**</span>', unsafe_allow_html=True)
