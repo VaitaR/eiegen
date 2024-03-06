@@ -6,3 +6,4 @@ st.write('This is a simple dashboard to monitor the InceptionLRT smart contract'
 # information and links on pages
 st.write('The dashboard has the following pages:')
 st.write('1. [Withdrawals_dash](http://https://inception-monitor.streamlit.app/?page=withdrawals_dash)')
+st.write('2. [Assets VS Withdraw](http://https://inception-monitor.streamlit.app/?page=Assets_Vs_Withdraw)')
