@@ -260,6 +260,9 @@ st.title('Withdraw logs')
 st.write(withdraw_logs_df_filtered)
 
 st.write('Redeem logs')
-st.write(redeem_logs_df_filtered)
+# add checkbox to show redeem logs
+show_redeem = st.checkbox('Show Redeem logs')
+if show_redeem:
+    st.write(redeem_logs_df_filtered)
 
 
