@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(layout='wide')
+
 from web3 import Web3, AsyncWeb3
 from eth_abi import decode
 import asyncio
@@ -166,9 +168,9 @@ withdraw_logs_df['amount'] = withdraw_logs_df['amount'].astype('float') / 10**18
 redeem_logs_df['amount'] = redeem_logs_df['amount'].astype('float') / 10**18                  
 # columns order
 withdraw_logs_df['Redeemed'] = 'None'
-withdraw_logs_df['AbleRedeem'] = 'None'
-withdraw_logs_df = withdraw_logs_df[['timeStamp', 'AbleRedeem', 'Redeemed', 'amount', 'event', 'sender', 'address', 'transactionHash', 'decoded_data']]
-redeem_logs_df = redeem_logs_df[['timeStamp', 'amount', 'event', 'sender', 'address', 'transactionHash', 'decoded_data']]
+withdraw_logs_df['AbleRedeem'] = 'True'
+withdraw_logs_df = withdraw_logs_df[['timeStamp', 'address', 'AbleRedeem', 'Redeemed', 'sender', 'amount', 'event', 'transactionHash', 'decoded_data']]
+redeem_logs_df = redeem_logs_df[['timeStamp', 'address', 'amount', 'sender', 'event',  'transactionHash', 'decoded_data']]
 
 st.title('Inception Monitoring Dashboard')
 
@@ -250,6 +252,8 @@ wallet_stats = withdraw_logs_df_filtered.groupby('address').agg({'amount': ['sum
 wallet_stats.columns = ['Wallet', 'Total Amount', 'Count']
 wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count'}, inplace=True)
 st.write(wallet_stats)
+
+
 
 # show table with logs
 st.title('Withdraw logs')
