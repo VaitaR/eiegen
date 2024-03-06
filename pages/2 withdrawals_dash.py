@@ -78,12 +78,12 @@ def get_logs_decode(address:str):
 curr_dir = os.path.dirname(os.path.dirname(__file__))
 
 # # load wallets info
-@st.cache_data
+@st.cache(ttl=3000)
 def load_wallets():
     wallets = json.load(open(os.path.join(curr_dir, 'inception_wallets.json')))['wallets']
     return wallets
 
-@st.cache_data
+@st.cache(ttl=3000)
 def get_wallets_logs(wallets):
     all_logs = []
     for wallet in wallets:
@@ -95,7 +95,7 @@ def get_wallets_logs(wallets):
         all_logs.append(logs)
     return all_logs
 
-@st.cache_data
+@st.cache(ttl=3000)
 def withdraw_logs(all_logs:list):
     withdraw_logs = []
     redeem_logs = []
@@ -229,7 +229,7 @@ current_block = w3.eth.block_number
 # check rpc status for sender address
 non_redeemed_df = withdraw_logs_df_filtered[withdraw_logs_df_filtered['Redeemed'] == 'None']
 
-@st.cache_data
+@st.cache(ttl=3000)
 def check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df):
     for i in range(len(non_redeemed_df)):
         try:
