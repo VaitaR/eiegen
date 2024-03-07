@@ -178,7 +178,7 @@ st.title('Inception Monitoring Dashboard')
 # add filter for the logs on the dashboard so user can filter by date
 # filter by date
 st.write('Filter by date')
-start_date = pd.to_datetime(st.date_input('Start date', datetime.utcnow() - pd.Timedelta(days=8)))
+start_date = pd.to_datetime(st.date_input('Start date', datetime.utcnow() - pd.Timedelta(days=14)))
 end_date = pd.to_datetime(st.date_input('End date', datetime.utcnow())) + pd.Timedelta(days=1)
 mask_withd = (withdraw_logs_df['timeStamp'] > start_date) & (withdraw_logs_df['timeStamp'] <= end_date)
 withdraw_logs_df_filtered = withdraw_logs_df.loc[mask_withd]
@@ -248,13 +248,6 @@ def check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df):
 withdraw_logs_df_filtered = check_redeemed_df(withdraw_logs_df_filtered, non_redeemed_df)
 st.write('AbleRedeem status checked')
 
-# show stats table
-st.write('Wallet Stats for the selected period')
-wallet_stats = withdraw_logs_df_filtered.groupby('address').agg({'amount': ['sum', 'count']}).reset_index()    
-wallet_stats.columns = ['Wallet', 'Total Amount', 'Count']
-wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count'}, inplace=True)
-st.write(wallet_stats)
-
 @st.cache_data(ttl=1800)
 def get_block():
     block_data = w3.eth.get_block('latest')
@@ -266,9 +259,19 @@ def get_block():
 
 current_block, block_timestamp = get_block()
 
+# show stats table
+st.write('Wallet Stats for the selected period')
+st.write('Date range:', start_date, 'to', end_date, 'days:', (end_date - start_date).days, 'wallet:', wallet_filter)
+st.write(f"\n Current block: {current_block} | Timestamp: {block_timestamp} (UTC)")
+
+wallet_stats = withdraw_logs_df_filtered.groupby('address').agg({'amount': ['sum', 'count']}).reset_index()    
+wallet_stats.columns = ['Wallet', 'Total Amount', 'Count']
+wallet_stats.rename(columns={'Total Amount':'Withd amount', 'Count':'Withd count'}, inplace=True)
+st.write(wallet_stats)
+
 # show table with logs
 st.title('Withdraw logs')
-st.write(f"\n Current block: {current_block} | Timestamp: {block_timestamp} (UTC)")
+
 st.write(withdraw_logs_df_filtered)
 
 st.write('Redeem logs')
